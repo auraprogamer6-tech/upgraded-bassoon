@@ -19,16 +19,16 @@ jobs:
           sudo usermod -aG sudo rdpuser
           echo "=== User Created Successfully ==="
 
-      - name: Installing Desktop Environment (XFCE) & XRDP
+            - name: Installing Desktop Environment (XFCE) & XRDP
         run: |
           sudo apt update && sudo apt upgrade -y
           sudo DEBIAN_FRONTEND=noninteractive apt install -y xfce4 xfce4-goodies xrdp
           sudo systemctl enable xrdp
-          echo "xfce4-session" > /home/rdpuser/.xinitrc
-          sudo sed -i 's/port=3389/port=3389/g' /etc/xrdp/xrdp.ini
+          echo "xfce4-session" | sudo tee /home/rdpuser/.xinitrc > /dev/null
+          sudo chown rdpuser:rdpuser /home/rdpuser/.xinitrc
+          sudo chmod 644 /home/rdpuser/.xinitrc
           sudo systemctl restart xrdp
           echo "=== XRDP Installed and Started ==="
-
       - name: Downloading & Configuring Ngrok Tunnel
         env:
           NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
