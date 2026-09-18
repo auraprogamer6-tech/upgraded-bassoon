@@ -1,0 +1,46 @@
+name: Linux-RDP-36h
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1440 # Maximum limit per run (24 hours tak stretch karne ke liye)
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setting up Environment & Password
+        run: |
+          sudo useradd -m -s /bin/bash rdpuser
+          echo "rdpuser:StrongPassword123" | sudo chpasswd
+          sudo usermod -aG sudo rdpuser
+          echo "=== User Created Successfully ==="
+
+      - name: Installing Desktop Environment (XFCE) & XRDP
+        run: |
+          sudo apt update && sudo apt upgrade -y
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y xfce4 xfce4-goodies xrdp
+          sudo systemctl enable xrdp
+          echo "xfce4-session" > /home/rdpuser/.xinitrc
+          sudo sed -i 's/port=3389/port=3389/g' /etc/xrdp/xrdp.ini
+          sudo systemctl restart xrdp
+          echo "=== XRDP Installed and Started ==="
+
+      - name: Downloading & Configuring Ngrok Tunnel
+        env:
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+        run: |
+          curl -sLok https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz | sudo tar xz -C /usr/local/bin
+          ngrok config add-authtoken $NGROK_AUTH_TOKEN
+          ngrok tcp 3389 --log=stdout &
+          echo "=== Ngrok Tunnel Initialized ==="
+
+      - name: Keep Alive Loop (To prevent timeout)
+        run: |
+          echo "RDP is up and running! Check Ngrok URL above."
+          while true; do
+            sleep 1800
+          done
